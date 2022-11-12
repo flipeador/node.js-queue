@@ -18,7 +18,7 @@ Simple JavaScript async FIFO/LIFO/PRIORITY queue implementation.
 
 #### Methods / Getters
 
-- **async** - Get an object that allows async `get` and `put`.
+- **async** — Get an object that allows async `get` and `put`.
 - **get()** — Remove and get an item from the queue immediately.
 - **put(item,priority)** — Put an item into the queue without blocking.
 - **clear()** — Clear the queue and cancel all tasks.

@@ -2,22 +2,28 @@
 
 const { setTimeout, clearTimeout } = require('node:timers');
 
-function remove(array, value)
+/**
+ * Removes elements from an array.
+ */
+function remove(array, value, count=1)
 {
     const index = array.indexOf(value);
-    if (index !== -1) array.splice(index, 1);
-    return index;
+    if (index !== -1)
+        return array.splice(index, count);
 }
 
+/**
+ * Comparison function for `PRIORITY` queues.
+ */
 function priorityFn(previous, current, index)
 {
-    if (!previous) return { value: current, index };
-    const prev = previous.value.priority ?? previous.value.value;
+    if (!previous) return { item: current, index };
+    const prev = previous.item.priority ?? previous.item.value;
     const curr = current.priority ?? current.value;
     const result = typeof(this._compareFn) === 'function'
-        ? this._compareFn.bind(this)(prev, curr)
-        : prev < curr;
-    return result ? previous : { value: current, index };
+        ? this._compareFn.call(this, prev, curr)
+        : prev < curr; // default (lowest first)
+    return result ? previous : { item: current, index };
 }
 
 /**
@@ -113,7 +119,7 @@ class AsyncManager
     async #wait(arr, timeout)
     {
         let timer;
-        const result = await new Promise((resolve) => {
+        const result = await new Promise(resolve => {
             if (timeout) timer = setTimeout(() => {
                 resolve(new QueueTimeout(`Promise timed out after ${timeout} ms`));
                 remove(arr, resolve);
@@ -256,12 +262,9 @@ class Queue
     /**
      * Put an item into the queue without blocking.
      * @param item The item to be added.
-     * @param priority Task priority. Only valid for `PRIORITY` queues.
+     * @param priority Task priority. Uses `item` if set to `undefined` or `null`.
      * @return {QueueTask} Returns a `QueueTask` object.
-     * @remarks
-     * - The item or an item is consumed immediately if there is any `async.get()` waiting.
-     * - If `priority` is `undefined` or `null` in a `PRIORITY` queue, `item` is used as priority.
-     * - Throws `QueueFull` if the queue is full.
+     * @remarks Throws `QueueFull` if the queue is full.
      */
     put(item, priority)
     {
