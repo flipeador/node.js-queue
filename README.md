@@ -1,4 +1,4 @@
-# Node.js Async FIFO/LIFO/PRIORITY Queue
+# Node.js Queue
 
 Simple JavaScript async FIFO/LIFO/PRIORITY queue implementation.
 
@@ -29,6 +29,12 @@ Simple JavaScript async FIFO/LIFO/PRIORITY queue implementation.
 - **count()** — Get the number of unfinished tasks in the queue.
 - **size()** — Get the number of tasks in the queue.
 
+## Installation
+
+```bash
+npm install https://github.com/flipeador/node.js-queue
+```
+
 ## Examples
 
 <details>
@@ -38,7 +44,7 @@ Retrieves least recently added entries first (first in, first out).
 
 ```js
 const { setTimeout } = require('node:timers');
-const { Queue } = require('./queue.js');
+const { Queue } = require('@flipeador/node.js-queue');
 
 (async () => {
     const queue = new Queue();
@@ -84,7 +90,7 @@ QueueTimeout [Error]: Promise timed out after 1000 ms
 Retrieves most recently added entries first (last in, first out).
 
 ```js
-const { Queue } = require('./queue.js');
+const { Queue } = require('@flipeador/node.js-queue');
 
 const queue = new Queue({ type: 'LIFO' });
 
@@ -109,7 +115,7 @@ Retrieves tasks in priority order (default lowest first).
 Option `compareFn` provides a user-defined comparison function.
 
 ```js
-const { Queue } = require('./queue.js');
+const { Queue } = require('@flipeador/node.js-queue');
 
 function compareFn(prev, curr)
 {
