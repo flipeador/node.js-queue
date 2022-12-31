@@ -1,5 +1,6 @@
-﻿"use strict";
+'use strict';
 
+const util = require('node:util');
 const { setTimeout, clearTimeout } = require('node:timers');
 
 /**
@@ -27,29 +28,37 @@ function priorityFn(previous, current, index)
 }
 
 /**
- * Base class for Queue exceptions.
+ * Base class for {@link Queue} exceptions.
  */
-class QueueError extends Error { }
+class QueueError extends Error {
+    constructor(message, ...args) {
+        super(util.format(message, ...args.map(x => util.inspect(x))));
+    }
+}
 
 /**
- * Exception thrown when the `Queue.get()` method is called on an empty queue.
+ * Exception thrown when {@link AsyncManager.get()} or {@link AsyncManager.set()} times out.
+ */
+class QueueTimeout extends QueueError {
+    constructor(timeout) {
+        super('Promise timed out after %s ms', timeout);
+    }
+}
+
+/**
+ * Exception thrown when {@link AsyncManager.get()} or {@link AsyncManager.put()} has been canceled.
+ */
+class QueueCanceled extends QueueError { }
+
+/**
+ * Exception thrown when {@link Queue.get()} is called on an empty queue.
  */
 class QueueEmpty extends QueueError { }
 
 /**
- * Exception thrown when the `Queue.put()` method is called on a full queue.
+ * Exception thrown when {@link Queue.put()} is called on a full queue.
  */
 class QueueFull extends QueueError { }
-
-/**
- * Exception thrown when the `AsyncManager.get()` or `AsyncManager.set()` method timeout has expired.
- */
-class QueueTimeout extends QueueError { }
-
-/**
- * Exception thrown when the `AsyncManager.get()` or `AsyncManager.set()` method has been canceled.
- */
-class QueueCanceled extends QueueError { }
 
 /**
  * Manages an asynchronous operation for a specific task.
@@ -57,7 +66,7 @@ class QueueCanceled extends QueueError { }
 class AsyncManager
 {
     /**
-     * Create an `AsyncManager` object.
+     * Create an AsyncManager object.
      * @param {Queue} queue The queue associated with this object.
      */
     constructor(queue)
@@ -69,12 +78,12 @@ class AsyncManager
      * Remove and get an item from the queue.
      * If queue is empty, wait until an item is available.
      * @param {Number?} timeout Timeout, in milliseconds.
-     * @return {Promise<QueueTask>} Returns a `QueueTask` object.
+     * @return {Promise<QueueTask>} Returns a {@link QueueTask} object.
      * @remarks
      * - The value associated with the task is stored in `QueueTask.value`.
-     * - The `QueueTask.done()` method should be called once the task has finished processing.
-     * - Throws `QueueTimeout` if the timeout has expired.
-     * - Throws `QueueCanceled` if the operation or task has been canceled.
+     * - The {@link QueueTask.done()} method should be called once the task has finished processing.
+     * - Throws {@link QueueTimeout} if the timeout has expired.
+     * - Throws {@link QueueCanceled} if the operation or task has been canceled.
      */
     async get(timeout)
     {
@@ -91,10 +100,10 @@ class AsyncManager
      * @param item The item to be added.
      * @param {Number?} priority Task priority. Only valid for `PRIORITY` queues.
      * @param {Number?} timeout Timeout, in milliseconds.
-     * @return {Promise<QueueTask>} Returns a `QueueTask` object.
+     * @return {Promise<QueueTask>} Returns a {@link QueueTask} object.
      * @remarks
-     * - Throws `QueueTimeout` if the timeout has expired.
-     * - Throws `QueueCanceled` if the operation has been canceled.
+     * - Throws {@link QueueTimeout} if the timeout has expired.
+     * - Throws {@link QueueCanceled} if the operation has been canceled.
      */
     async put(item, priority, timeout)
     {
@@ -106,7 +115,7 @@ class AsyncManager
     }
 
     /**
-     * Cancel the ongoing operation (`get()` or `set()`).
+     * Cancel {@link get} or {@link put}.
      */
     cancel()
     {
@@ -121,7 +130,7 @@ class AsyncManager
         let timer;
         const result = await new Promise(resolve => {
             if (timeout) timer = setTimeout(() => {
-                resolve(new QueueTimeout(`Promise timed out after ${timeout} ms`));
+                resolve(new QueueTimeout(timeout));
                 remove(arr, resolve);
             }, timeout);
             (this._array = arr).push(this._resolve = resolve);
@@ -144,7 +153,7 @@ class AsyncManager
 class QueueTask
 {
     /**
-     * Create a `QueueTask` object.
+     * Create a QueueTask object.
      * @param {Queue} queue The queue associated with the task.
      * @param item Task value.
      * @param priority Task priority. Only valid for `PRIORITY` queues.
@@ -156,7 +165,7 @@ class QueueTask
         this.priority = priority;
         this._promise = new Promise(resolve => {
             this._resolve = resolve;
-        })
+        });
     }
 
     /**
@@ -183,7 +192,7 @@ class QueueTask
     }
 
     /**
-     * Returns a string representation of the value associated with this task.
+     * Returns a string representation of the value associated with the task.
      */
     toString()
     {
@@ -224,7 +233,7 @@ class Queue
     }
 
     /**
-     * Get an `AsyncManager` object that allows asynchronous operations for a task.
+     * Get an {@link AsyncManager} object that allows asynchronous operations for a task.
      */
     get async()
     {
@@ -233,11 +242,11 @@ class Queue
 
     /**
      * Remove and get an item from the queue immediately.
-     * @return {QueueTask} Returns a `QueueTask` object.
+     * @return {QueueTask} Returns a {@link QueueTask} object.
      * @remarks
      * - The value associated with the task is stored in `QueueTask.value`.
-     * - The `QueueTask.done()` method should be called once the task has finished processing.
-     * - Throws `QueueEmpty` if the queue is empty.
+     * - The {@link QueueTask.done()} method should be called once the task has finished processing.
+     * - Throws {@link QueueEmpty} if the queue is empty.
      */
     get()
     {
@@ -262,9 +271,9 @@ class Queue
     /**
      * Put an item into the queue without blocking.
      * @param item The item to be added.
-     * @param priority Task priority. Uses `item` if set to `undefined` or `null`.
-     * @return {QueueTask} Returns a `QueueTask` object.
-     * @remarks Throws `QueueFull` if the queue is full.
+     * @param priority Task priority. Defaults to `item`.
+     * @return {QueueTask} Returns a {@link QueueTask} object.
+     * @remarks Throws {@link QueueFull} if the queue is full.
      */
     put(item, priority)
     {
@@ -278,16 +287,17 @@ class Queue
 
     /**
      * Clear the queue and cancel all tasks.
-     * @returns {QueueTask[]} Array of canceled tasks.
+     * @returns {QueueTask[]} List of canceled tasks.
      */
     clear()
     {
+        const error = new QueueCanceled('The queue has been cleared');
         while (this._getters.length)
-            this._getters.shift()(new QueueCanceled('The queue has been cleared'));
+            this._getters.shift()(error);
         while (this._putters.length)
-            this._putters.shift()();
-        while (this._counter)
-            this.done();
+            this._putters.shift()(error);
+        for (const task of this._items)
+            ++this._counter, task.done(error);
         return this._items.splice(0);
     }
 
@@ -296,9 +306,9 @@ class Queue
      * @param {Number?} timeout Timeout, in milliseconds.
      * @remarks
      * - The count of unfinished tasks increases each time one is added to the queue.
-     * - The count of unfinished tasks decreases each time `done()` is called to indicate that an item was retrieved and all work on it is completed.
-     * - When the count of unfinished tasks drops to zero, `join()` unblocks.
-     * - Throws `QueueTimeout` if the timeout has expired.
+     * - The count of unfinished tasks decreases each time {@link done()} is called to indicate that an item was retrieved and all work on it is completed.
+     * - When the count of unfinished tasks drops to zero, {@link join()} unblocks.
+     * - Throws {@link QueueTimeout} if the timeout has expired.
      */
     async join(timeout)
     {
@@ -307,7 +317,7 @@ class Queue
             let timer;
             const result = await new Promise(resolve => {
                 if (timeout) timer = setTimeout(() => {
-                    resolve(new QueueTimeout(`Promise timed out after ${timeout} ms`));
+                    resolve(new QueueTimeout(timeout));
                 }, timeout);
                 this._joiners.push(resolve);
             });
@@ -321,8 +331,8 @@ class Queue
      * Indicate that a formerly enqueued task is complete.
      * @remarks
      * - For each retrieved task, a subsequent call to this function tells the queue that the processing on the task is complete.
-     * - All blocking `join()`s will resume when all items have been processed (meaning that a `done()` call was received for every item that had been put into the queue).
-     * - Throws `QueueError` if called more times than there were items placed in the queue.
+     * - All blocking {@link join()}s will resume when all items have been processed (meaning that a {@link done()} call was received for every item that had been put into the queue).
+     * - Throws {@link QueueError} if called more times than there were items placed in the queue.
      */
     done()
     {
@@ -394,5 +404,5 @@ module.exports = {
     QueueCanceled,
     AsyncManager,
     QueueTask,
-    Queue,
+    Queue
 };

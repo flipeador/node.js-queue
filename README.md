@@ -2,7 +2,7 @@
 
 Simple JavaScript async FIFO/LIFO/PRIORITY queue implementation.
 
-## Overview
+## Features
 
 #### Parameters
 
@@ -28,6 +28,8 @@ Simple JavaScript async FIFO/LIFO/PRIORITY queue implementation.
 - **full()** — Check if the queue is full (there are `maxsize` items in the queue).
 - **count()** — Get the number of unfinished tasks in the queue.
 - **size()** — Get the number of tasks in the queue.
+
+> :information_source: `Queue#clear` should be called when the queue is no longer to be used.
 
 ## Installation
 
